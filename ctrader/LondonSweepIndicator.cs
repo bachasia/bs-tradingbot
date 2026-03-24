@@ -32,7 +32,7 @@ namespace cAlgo.Indicators
         Done             // Day completed — no more trading
     }
 
-    [Indicator("London Sweep v2 | US30", IsOverlay = true,
+    [Indicator(IsOverlay = true,
         TimeZone = TimeZones.EasternStandardTime,
         AccessRights = AccessRights.None)]
     public class LondonSweepIndicator : Indicator
@@ -193,8 +193,8 @@ namespace cAlgo.Indicators
             if (barTime.DayOfWeek == DayOfWeek.Saturday ||
                 barTime.DayOfWeek == DayOfWeek.Sunday) return;
 
-            // ─── H4 TREND FILTER (non-repainting: Last(1)) ──────────
-            UpdateH4Filter();
+            // ─── H4 TREND FILTER (time-synced, non-repainting) ──────
+            UpdateH4Filter(barTime);
 
             // ─── STATE: IDLE → LONDON ────────────────────────────────
             if (_state == SessionState.Idle && InRange(hhmm, LondonStartHHMM, LondonEndHHMM))
@@ -203,7 +203,7 @@ namespace cAlgo.Indicators
                 _londonHigh = Bars.HighPrices[prev];
                 _londonLow = Bars.LowPrices[prev];
                 _londonBoxStartIdx = prev;
-                CaptureH1CloseAtLondonStart();
+                CaptureH1CloseAtLondonStart(barTime);
                 DrawLondonBox(prev);
             }
 
@@ -219,7 +219,7 @@ namespace cAlgo.Indicators
             if (_state == SessionState.London && !InRange(hhmm, LondonStartHHMM, LondonEndHHMM))
             {
                 _rangeSize = _londonHigh - _londonLow;
-                CaptureH1CloseAtLondonEnd();
+                CaptureH1CloseAtLondonEnd(barTime);
 
                 // Range too small → done for the day
                 if (_rangeSize < MinRange)
@@ -288,11 +288,16 @@ namespace cAlgo.Indicators
             // Signals already written in DetectSweep; default NaN
         }
 
-        // ─── H4 FILTER ──────────────────────────────────────────────────
-        private void UpdateH4Filter()
+        // ─── H4 FILTER (time-synced for correct backtesting) ─────────────
+        private void UpdateH4Filter(DateTime barTime)
         {
-            double fast = _h4EmaFast.Result.Last(1);
-            double slow = _h4EmaSlow.Result.Last(1);
+            // Find H4 bar that corresponds to current M15 bar time
+            int h4Idx = _h4Bars.OpenTimes.GetIndexByTime(barTime);
+            if (h4Idx < 1) { _h4Bullish = false; _h4Bearish = false; return; }
+
+            // Use previous closed H4 bar (h4Idx-1) for non-repainting
+            double fast = _h4EmaFast.Result[h4Idx - 1];
+            double slow = _h4EmaSlow.Result[h4Idx - 1];
             bool valid = !double.IsNaN(fast) && !double.IsNaN(slow);
             _h4Bullish = valid && fast > slow;
             _h4Bearish = valid && fast < slow;
@@ -310,20 +315,24 @@ namespace cAlgo.Indicators
             _shortAllowed = (UseH4Filter ? _h4Bearish : true) && (UseH1Filter ? momNeg : true);
         }
 
-        // ─── H1 CLOSE CAPTURES ───────────────────────────────────────────
-        /// <summary>Capture H1 close at London start (02:00-03:00 candle close = 03:00 EST).</summary>
-        private void CaptureH1CloseAtLondonStart()
+        // ─── H1 CLOSE CAPTURES (time-synced for correct backtesting) ─────
+        /// <summary>Capture H1 close at London start. Uses time-based lookup
+        /// to get the H1 bar that closed at ~03:00 EST (the 02:00-03:00 candle).</summary>
+        private void CaptureH1CloseAtLondonStart(DateTime barTime)
         {
-            if (_h1Bars.Count > 1)
-                _h1CloseAtLondonStart = _h1Bars.ClosePrices.Last(1);
+            int h1Idx = _h1Bars.OpenTimes.GetIndexByTime(barTime);
+            if (h1Idx > 0)
+                _h1CloseAtLondonStart = _h1Bars.ClosePrices[h1Idx - 1];
         }
 
-        /// <summary>Capture H1 close at London end (08:00-09:00 candle close = 09:00 EST).
+        /// <summary>Capture H1 close at London end. Uses time-based lookup
+        /// to get the H1 bar that closed at ~09:00 EST (the 08:00-09:00 candle).
         /// Strategy compares this vs London start close (6h apart).</summary>
-        private void CaptureH1CloseAtLondonEnd()
+        private void CaptureH1CloseAtLondonEnd(DateTime barTime)
         {
-            if (_h1Bars.Count > 1)
-                _h1CloseAtLondonEnd = _h1Bars.ClosePrices.Last(1);
+            int h1Idx = _h1Bars.OpenTimes.GetIndexByTime(barTime);
+            if (h1Idx > 0)
+                _h1CloseAtLondonEnd = _h1Bars.ClosePrices[h1Idx - 1];
         }
 
         // ─── SWEEP DETECTION ─────────────────────────────────────────────
