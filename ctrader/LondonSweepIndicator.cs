@@ -105,6 +105,14 @@ namespace cAlgo.Indicators
         [Output("TP Price", LineColor = "Transparent")]
         public IndicatorDataSeries TpPriceOut { get; set; }
 
+        // ─── PUBLIC STATE (for cBot debug logging) ───────────────────
+        public SessionState CurrentState { get { return _state; } }
+        public double LondonHighValue { get { return _londonHigh; } }
+        public double LondonLowValue { get { return _londonLow; } }
+        public double RangeValue { get { return _rangeSize; } }
+        public bool IsLongAllowed { get { return _longAllowed; } }
+        public bool IsShortAllowed { get { return _shortAllowed; } }
+
         // ─── PRIVATE STATE ───────────────────────────────────────────────
         private SessionState _state;
         private double _londonHigh, _londonLow, _rangeSize;
@@ -140,8 +148,12 @@ namespace cAlgo.Indicators
 
             _lastDate = DateTime.MinValue;
             _lastIndex = -1;
+            _debugBarCount = 0;
             ResetDay();
         }
+
+        // Debug counter — only log first N bars per day to avoid spam
+        private int _debugBarCount;
 
         /// <summary>Reset all daily state variables.</summary>
         private void ResetDay()

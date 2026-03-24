@@ -18,7 +18,7 @@ using cAlgo.Indicators;
 
 namespace cAlgo.Robots
 {
-    [Robot("London Sweep Bot v2", TimeZone = TimeZones.EasternStandardTime,
+    [Robot(TimeZone = TimeZones.EasternStandardTime,
         AccessRights = AccessRights.None)]
     public class LondonSweepBot : Robot
     {
@@ -122,6 +122,8 @@ namespace cAlgo.Robots
 
             Print("[{0}] Started on {1} | AutoTrade={2} Risk={3}% FTMO={4}",
                 BotLabel, Symbol.Name, AutoTrade, RiskPercent, EnableFtmoGuards);
+            Print("[{0}] PipSize={1} TickSize={2} TickValue={3} MinVol={4}",
+                BotLabel, Symbol.PipSize, Symbol.TickSize, Symbol.TickValue, Symbol.VolumeInUnitsMin);
         }
 
         // ─── ON BAR CLOSED ───────────────────────────────────────────────
@@ -149,17 +151,31 @@ namespace cAlgo.Robots
                 CloseBotPositions("EOD cutoff");
             }
 
-            // ─── Read indicator signals ──────────────────────────────
-            double longVal  = _indicator.LongSignal.Last(1);
-            double shortVal = _indicator.ShortSignal.Last(1);
+            // ─── Log indicator state at key times ─────────────────────
+            // Log at London close (09:00) for daily diagnostics
+            if (hhmm >= 900 && hhmm <= 915)
+            {
+                Print("[{0}] DAILY STATUS @ {1}: State={2} Range={3:F1} H={4:F1} L={5:F1} LongOK={6} ShortOK={7}",
+                    BotLabel, Bars.OpenTimes.Last(1).ToString("MM/dd HH:mm"),
+                    _indicator.CurrentState, _indicator.RangeValue,
+                    _indicator.LondonHighValue, _indicator.LondonLowValue,
+                    _indicator.IsLongAllowed, _indicator.IsShortAllowed);
+            }
+
+            // ─── Read indicator signals (explicit index for reliability) ──
+            int sigIdx = Bars.Count - 2;  // just-closed bar index
+            if (sigIdx < 0) return;
+
+            double longVal  = _indicator.LongSignal[sigIdx];
+            double shortVal = _indicator.ShortSignal[sigIdx];
             bool isLong  = !double.IsNaN(longVal) && longVal > 0.5;
             bool isShort = !double.IsNaN(shortVal) && shortVal > 0.5;
 
             if (!isLong && !isShort) return;
 
-            double entryPrice = _indicator.EntryPriceOut.Last(1);
-            double slPrice    = _indicator.SlPriceOut.Last(1);
-            double tpPrice    = _indicator.TpPriceOut.Last(1);
+            double entryPrice = _indicator.EntryPriceOut[sigIdx];
+            double slPrice    = _indicator.SlPriceOut[sigIdx];
+            double tpPrice    = _indicator.TpPriceOut[sigIdx];
 
             if (double.IsNaN(entryPrice) || double.IsNaN(slPrice) || double.IsNaN(tpPrice))
             {
@@ -175,7 +191,7 @@ namespace cAlgo.Robots
             // ─── Guards ──────────────────────────────────────────────
             if (!PassesGuards()) return;
 
-            PlayAlert(SoundType.Positive);
+            PlayAlert();
 
             if (!AutoTrade)
             {
@@ -196,6 +212,9 @@ namespace cAlgo.Robots
             double costPerUnit = slDistance * (Symbol.TickValue / Symbol.TickSize);
             double volume = riskAmount / costPerUnit;
             volume = Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
+
+            Print("[{0}] VOLUME CALC: Balance={1:F2} Risk={2:F2} SLDist={3:F1} CostPerUnit={4:F4} Volume={5}",
+                BotLabel, Account.Balance, riskAmount, slDistance, costPerUnit, volume);
 
             if (volume < Symbol.VolumeInUnitsMin)
             {
@@ -218,12 +237,12 @@ namespace cAlgo.Robots
                     Print("[{0}] ORDER FILLED: {1} Vol={2} SL={3:F1}pips TP={4:F1}pips",
                         BotLabel, dir, volume, slPips, tpPips);
                     _tradesToday++;
-                    PlayAlert(SoundType.Positive);
+                    PlayAlert();
                 }
                 else
                 {
                     Print("[{0}] ORDER FAILED: {1}", BotLabel, result.Error);
-                    PlayAlert(SoundType.Negative);
+                    PlayAlert();
                 }
             }
             catch (Exception ex)
@@ -239,7 +258,7 @@ namespace cAlgo.Robots
             if (_tradesToday >= MaxTradesPerDay)
             {
                 Print("[{0}] SKIP: Max trades reached ({1})", BotLabel, MaxTradesPerDay);
-                PlayAlert(SoundType.Negative);
+                PlayAlert();
                 return false;
             }
 
@@ -250,7 +269,7 @@ namespace cAlgo.Robots
             if (dailyPnL <= -FtmoDailyLossLimit * 0.8)
             {
                 Print("[{0}] FTMO: Daily loss near limit ({1:F2}$). Blocked.", BotLabel, dailyPnL);
-                PlayAlert(SoundType.Negative);
+                PlayAlert();
                 return false;
             }
 
@@ -260,7 +279,7 @@ namespace cAlgo.Robots
             if (drawdown >= FtmoMaxDrawdown * 0.8)
             {
                 Print("[{0}] FTMO: Drawdown near limit ({1:F2}$). Blocked.", BotLabel, drawdown);
-                PlayAlert(SoundType.Negative);
+                PlayAlert();
                 return false;
             }
 
@@ -315,10 +334,10 @@ namespace cAlgo.Robots
             }
         }
 
-        private void PlayAlert(SoundType sound)
+        private void PlayAlert()
         {
             if (EnableSound && !IsBacktesting)
-                Notifications.PlaySound(sound);
+                Notifications.PlaySound("C:\\Windows\\Media\\notify.wav");
         }
 
         // ─── EVENT HANDLERS ──────────────────────────────────────────────
@@ -330,8 +349,7 @@ namespace cAlgo.Robots
             Print("[{0}] CLOSED: {1} Entry={2:F1} P&L={3:F2}$ Pips={4:F1} Reason={5}",
                 BotLabel, pos.TradeType, pos.EntryPrice, pos.NetProfit, pos.Pips, args.Reason);
 
-            PlayAlert(args.Reason == PositionCloseReason.TakeProfit
-                ? SoundType.Positive : SoundType.Negative);
+            PlayAlert();
         }
     }
 }
