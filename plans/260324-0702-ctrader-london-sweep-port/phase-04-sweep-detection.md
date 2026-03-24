@@ -10,7 +10,7 @@
 
 ## Overview
 - **Priority**: P1 — core strategy logic + cBot interface
-- **Status**: pending
+- **Status**: complete
 - **Effort**: 1.5h
 - **Description**: Implement sweep detection during the NY sweep window (09:30-11:00 EST), trade level computation (entry/SL/TP), trade management (SL hit, TP hit, EOD close), trade level visuals, and populate `[Output]` data series so the cBot can read signals.
 

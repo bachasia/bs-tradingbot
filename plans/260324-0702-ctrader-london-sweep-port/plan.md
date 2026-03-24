@@ -1,7 +1,7 @@
 ---
 title: "Port London Sweep Indicator to cTrader (C# / cAlgo)"
 description: "2-file port of PineScript v6 London Sweep strategy to cTrader Indicator + cBot with pending order flow"
-status: pending
+status: in-progress
 priority: P1
 effort: 10h
 branch: feat/ctrader-london-sweep
@@ -13,7 +13,14 @@ created: 2026-03-24
 
 ## Overview
 
-Port the existing TradingView PineScript v6 London Sweep Indicator to cTrader Automate (C# / cAlgo API). Two-file architecture: `LondonSweepIndicator.cs` (visual + signal logic) and `LondonSweepBot.cs` (execution + trade management). Target broker: FxPro, symbol `#US30`.
+Port the existing TradingView PineScript v6 London Sweep Indicator to cTrader Automate (C# / cAlgo API). Two-file architecture: `LondonSweepIndicator.cs` (visual + signal logic) and `LondonSweepBot.cs` (execution + trade management). Target platform: FTMO (prop firm), symbol `US30`.
+
+### FTMO-Specific Considerations
+- **Max Daily Loss**: 5% of initial balance — cBot must track daily P&L and halt trading if approaching limit
+- **Max Overall Drawdown**: 10% of initial balance — cBot should monitor equity drawdown
+- **Symbol**: `US30` (no prefix/suffix on FTMO cTrader)
+- **Automation**: FTMO allows cBots on cTrader — no restrictions on automated trading
+- **One trade per day**: Strategy already enforces this, aligns well with FTMO risk rules
 
 ## Architecture
 
@@ -43,19 +50,19 @@ ctrader/
 
 | Phase | Description | Effort | Status | Depends On |
 |---|---|---|---|---|
-| 1 | Project setup, boilerplate, input parameters | 1h | pending | - |
-| 2 | Session detection, London range tracking, range box visual | 1.5h | pending | Phase 1 |
-| 3 | MTF filters (H4 EMA + H1 momentum), non-repainting | 1.5h | pending | Phase 2 |
-| 4 | Sweep detection logic, output properties for cBot | 1.5h | pending | Phase 3 |
-| 5 | Dashboard visuals (status panel) | 1h | pending | Phase 4 |
-| 6 | cBot — reference indicator, read signals, pending orders | 1.5h | pending | Phase 4 |
-| 7 | cBot — trade management, EOD cutoff, notifications, logging | 1h | pending | Phase 6 |
-| 8 | Testing — backtest on FxPro demo, validation checklist | 1h | pending | Phase 5, 7 |
+| 1 | Project setup, boilerplate, input parameters | 1h | complete | - |
+| 2 | Session detection, London range tracking, range box visual | 1.5h | complete | Phase 1 |
+| 3 | MTF filters (H4 EMA + H1 momentum), non-repainting | 1.5h | complete | Phase 2 |
+| 4 | Sweep detection logic, output properties for cBot | 1.5h | complete | Phase 3 |
+| 5 | Dashboard visuals (status panel) | 1h | complete | Phase 4 |
+| 6 | cBot — reference indicator, read signals, pending orders | 1.5h | complete | Phase 4 |
+| 7 | cBot — trade management, EOD cutoff, notifications, logging | 1h | complete | Phase 6 |
+| 8 | Testing — backtest on FTMO demo, validation checklist | 1h | pending | Phase 5, 7 |
 
 ## Dependencies
 
-- cTrader Desktop installed with FxPro demo account
-- `#US30` symbol available on FxPro demo
+- cTrader Desktop installed with FTMO account
+- `US30` symbol available on FTMO cTrader
 - cTrader Automate IDE (built into cTrader Desktop)
 - No external NuGet packages needed — `cAlgo.API` ships with platform
 
@@ -87,7 +94,8 @@ ctrader/
 
 ## Unresolved Questions
 
-1. Exact pip size / point value for `#US30` on FxPro — needs runtime check via `Symbol.PipSize`
-2. Whether FxPro restricts `AccessRights.FullAccess` for email notifications — test on demo
+1. Exact pip size / point value for `US30` on FTMO — needs runtime check via `Symbol.PipSize`
+2. Whether FTMO restricts `AccessRights.FullAccess` for email notifications — test on account
 3. DST edge cases with `TimeZones.EasternStandardTime` around March/November transitions — manual validation needed
 4. `PlaceLimitOrder` overload: newer API uses `ProtectionType` enum for SL/TP as price vs pips — verify which overloads available on user's cTrader version
+5. FTMO daily loss limit calculation: does it use balance-based or equity-based? Verify on FTMO dashboard

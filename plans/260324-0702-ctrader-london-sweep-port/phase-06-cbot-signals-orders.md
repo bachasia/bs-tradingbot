@@ -11,7 +11,7 @@
 
 ## Overview
 - **Priority**: P1 — this is the execution layer
-- **Status**: pending
+- **Status**: complete
 - **Effort**: 1.5h
 - **Description**: Implement cBot's `OnStart()` to reference the indicator via `GetIndicator<>()`, `OnBarClosed()` to read signal outputs, and pending limit order placement with SL/TP. Includes volume validation and signal-to-order mapping.
 
@@ -52,7 +52,7 @@ Need to verify which overloads are available on user's cTrader version.
 - cTrader uses **volume in units**, not lots
 - `Symbol.VolumeInUnitsMin` = minimum allowed volume
 - `Symbol.NormalizeVolumeInUnits(volume)` = rounds to valid step
-- User's `TradeVolume` parameter should be in units (e.g., 1.0 for #US30 = 1 contract)
+- User's `TradeVolume` parameter should be in units (e.g., 1.0 for US30 = 1 contract)
 
 ## Requirements
 
@@ -327,7 +327,7 @@ Both should match.
 // 3. Click "Manage References" in the top toolbar
 // 4. Check the box next to "LondonSweepIndicator"
 // 5. Build the cBot (Ctrl+B)
-// 6. Attach to #US30 M15 chart
+// 6. Attach to US30 M15 chart
 // 7. Set parameters in the dialog
 // 8. Start the cBot
 // ══════════════════════════════════════════════════════════════════════════
@@ -362,8 +362,8 @@ Both should match.
 ## Risk Assessment
 - **GetIndicator param order**: If indicator params are reordered, cBot breaks silently (wrong values, not compile error). Mitigation: document param order in both files with matching comments. Consider a future refactor to use a shared config class
 - **PlaceLimitOrder overload**: The pips-based overload may be marked obsolete in newer cTrader. If compile warns, switch to `ProtectionType.Pips` overload. Test on actual cTrader IDE
-- **SL/TP pips rounding**: `slPips` could be fractional — `PlaceLimitOrder` should handle it, but verify. Some symbols require integer pips — `#US30` likely accepts fractional
-- **Limit order rejection**: FxPro may reject limit orders if entry price is too far from current market. This is by design — the limit order IS the confirmation mechanism. If market moves away, order won't fill = user protected
+- **SL/TP pips rounding**: `slPips` could be fractional — `PlaceLimitOrder` should handle it, but verify. Some symbols require integer pips — `US30` likely accepts fractional
+- **Limit order rejection**: FTMO may reject limit orders if entry price is too far from current market. This is by design — the limit order IS the confirmation mechanism. If market moves away, order won't fill = user protected
 - **Timing gap**: Between indicator signal and cBot order placement, market may have moved. Since this is a pending limit order (not market), the entry price is fixed — order fills only if price returns to that level
 
 ## Security Considerations

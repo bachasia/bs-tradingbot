@@ -10,7 +10,7 @@
 
 ## Overview
 - **Priority**: P1 — core logic that all other phases depend on
-- **Status**: pending
+- **Status**: complete
 - **Effort**: 1.5h
 - **Description**: Implement session time checks (London 03:00-09:00, Sweep 09:30-11:00), daily reset, London range high/low tracking during session, and the visual range box on chart. Also implement the `lastIndex` bar-close detection pattern.
 

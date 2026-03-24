@@ -10,7 +10,7 @@
 
 ## Overview
 - **Priority**: P1 — completes the cBot execution cycle
-- **Status**: pending
+- **Status**: complete
 - **Effort**: 1h
 - **Description**: Implement EOD position/order cleanup, pending order expiration management, sound/email notifications, comprehensive logging, and `OnStop()` cleanup. This completes the cBot's lifecycle.
 
@@ -42,9 +42,57 @@
 - Log every state transition and decision for debugging
 - During backtest, Print still works (unlike notifications)
 
+## FTMO Risk Guard
+
+### Why
+FTMO enforces strict risk limits — breaching them loses the funded account:
+- **Max Daily Loss**: 5% of initial balance (e.g., $5,000 on $100K account)
+- **Max Overall Drawdown**: 10% of initial balance (e.g., $10,000 on $100K account)
+
+### Implementation
+Add two new parameters and a pre-trade check:
+
+```csharp
+[Parameter("FTMO Daily Loss Limit ($)", Group = "FTMO Risk", DefaultValue = 5000)]
+public double FtmoDailyLossLimit { get; set; }
+
+[Parameter("FTMO Max Drawdown ($)", Group = "FTMO Risk", DefaultValue = 10000)]
+public double FtmoMaxDrawdown { get; set; }
+
+[Parameter("Enable FTMO Guards", Group = "FTMO Risk", DefaultValue = true)]
+public bool EnableFtmoGuards { get; set; }
+```
+
+Before placing any order in `OnBarClosed()`:
+```csharp
+if (EnableFtmoGuards)
+{
+    double dailyPnL = GetDailyPnL();
+    if (dailyPnL <= -FtmoDailyLossLimit * 0.8)  // 80% threshold = safety margin
+    {
+        Print("[FTMO GUARD] Daily loss approaching limit: {0:F2}. No new trades.", dailyPnL);
+        return;
+    }
+
+    double totalDrawdown = Account.Balance - Account.Equity;
+    if (totalDrawdown >= FtmoMaxDrawdown * 0.8)
+    {
+        Print("[FTMO GUARD] Drawdown approaching limit: {0:F2}. No new trades.", totalDrawdown);
+        return;
+    }
+}
+```
+
+### How to Apply
+- Place FTMO guard check BEFORE the limit order call in `OnBarClosed()`
+- Use 80% threshold (not 100%) to give safety margin
+- Log clearly when guard activates so user knows why trade was skipped
+
 ## Requirements
 
 ### Functional
+- FTMO daily loss guard: skip new trades when daily P&L approaches 80% of limit
+- FTMO drawdown guard: skip new trades when equity drawdown approaches 80% of limit
 - EOD cutoff: At `EodCutoffHHMM`, cancel all bot's pending orders and close all bot's positions
 - Pending order timeout: If no fill by EOD, cancel the order (handled by EOD cutoff)
 - Sound notifications: On signal detection, order placement, SL/TP fill, EOD close
@@ -349,4 +397,4 @@ if (hhmm >= EodCutoffHHMM && !_eodDone)
 - Order labels contain only strategy name — no sensitive data
 
 ## Next Steps
-- Phase 8: Testing on FxPro demo, validation checklist
+- Phase 8: Testing on FTMO demo, validation checklist

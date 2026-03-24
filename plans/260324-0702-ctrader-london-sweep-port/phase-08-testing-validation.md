@@ -1,4 +1,4 @@
-# Phase 8: Testing on FxPro Demo & Validation Checklist
+# Phase 8: Testing on FTMO Demo & Validation Checklist
 
 ## Context Links
 - [Phase 5: Dashboard Visuals](./phase-05-dashboard-visuals.md)
@@ -11,27 +11,27 @@
 - **Priority**: P1 — must validate before live use
 - **Status**: pending
 - **Effort**: 1h
-- **Description**: Backtest indicator and cBot on FxPro demo account with `#US30` M15 chart. Compare output against TradingView Pine indicator. Validate all state transitions, MTF filters, sweep detection, order placement, trade management, and EOD cutoff.
+- **Description**: Backtest indicator and cBot on FTMO demo account with `US30` M15 chart. Compare output against TradingView Pine indicator. Validate all state transitions, MTF filters, sweep detection, order placement, trade management, and EOD cutoff.
 
 ## Key Insights
 
 ### Backtest vs Live Testing
 - **Backtest** (historical): Fast, covers many days, validates logic correctness. Notifications don't fire. Use cTrader's built-in backtester.
-- **Forward test** (demo live): Slower but validates real-time behavior — tick-by-tick Calculate calls, notifications, order fill mechanics. Run on FxPro demo for at least a few trading days.
+- **Forward test** (demo live): Slower but validates real-time behavior — tick-by-tick Calculate calls, notifications, order fill mechanics. Run on FTMO demo for at least a few trading days.
 - Both are needed. Backtest first to catch logic bugs, then forward test for integration.
 
 ### Cross-Platform Comparison Method
 1. Open TradingView with Pine indicator on US30 M15
-2. Open cTrader with cAlgo indicator on #US30 M15
+2. Open cTrader with cAlgo indicator on US30 M15
 3. Pick 5-10 specific dates with known sweep signals
 4. Compare: London high/low, H4 EMA values, sweep detection bar, entry/SL/TP prices
 5. Document any differences and root-cause them
 
 ### Known Sources of Minor Differences
 - **EMA seeding**: Pine and cTrader may use slightly different initial EMA values (SMA seed vs first-bar seed). Difference diminishes over time — compare bars >100 bars from start.
-- **Bar open times**: FxPro server time vs TradingView exchange time — should both be UTC-based, but verify.
+- **Bar open times**: FTMO server time vs TradingView exchange time — should both be UTC-based, but verify.
 - **Tick data vs OHLC**: Backtest on bar data (M15 OHLC) — intra-bar SL/TP hit order is approximated. Same limitation as Pine strategy backtest.
-- **Spread**: FxPro #US30 has spread (2-5 pts). Pine indicator ignores spread. cTrader backtest can include spread — test both with and without.
+- **Spread**: FTMO US30 has spread (2-5 pts). Pine indicator ignores spread. cTrader backtest can include spread — test both with and without.
 
 ## Requirements
 
@@ -55,7 +55,7 @@ Testing Pipeline
 ├── Stage 1: Compilation Check
 │   └── Both files compile in cTrader Automate IDE
 ├── Stage 2: Indicator Backtest (visual)
-│   ├── Attach indicator to #US30 M15 chart
+│   ├── Attach indicator to US30 M15 chart
 │   ├── Scroll through 30+ days of history
 │   └── Verify: boxes, lines, dashboard, state transitions
 ├── Stage 3: Cross-Platform Comparison
@@ -67,7 +67,7 @@ Testing Pipeline
 │   ├── Check trade log for correct entries/exits
 │   └── Verify SL/TP/EOD outcomes match indicator
 ├── Stage 5: cBot Forward Test (demo)
-│   ├── Run cBot on live FxPro demo (AutoTrade=false first)
+│   ├── Run cBot on live FTMO demo (AutoTrade=false first)
 │   ├── Verify signals, notifications, logging
 │   └── Then AutoTrade=true for 2-5 trading days
 └── Stage 6: Edge Case Validation
@@ -104,7 +104,7 @@ Testing Pipeline
 
 ### Step 2: Indicator Visual Backtest
 
-1. Attach `LondonSweepIndicator` to `#US30` M15 chart
+1. Attach `LondonSweepIndicator` to `US30` M15 chart
 2. Use default parameters
 3. Scroll back 30+ trading days
 4. Check each day for:
@@ -154,7 +154,7 @@ Trade Result:       _________      _______    ___
 1. Open cTrader Backtester
 2. Select `LondonSweepBot`
 3. Settings:
-   - Symbol: `#US30`
+   - Symbol: `US30`
    - Timeframe: M15
    - Date range: last 60 trading days
    - AutoTrade: `true`
@@ -175,7 +175,7 @@ Trade Result:       _________      _______    ___
 
 ### Step 5: cBot Forward Test (Demo)
 
-1. Attach cBot to live `#US30` M15 chart on FxPro demo
+1. Attach cBot to live `US30` M15 chart on FTMO demo
 2. **Phase A**: `AutoTrade = false` (alerts only)
    - Run for 2-3 trading days
    - Verify signals appear in log
@@ -203,6 +203,8 @@ Run these specific scenarios (find historical dates or wait for live occurrence)
 | Sweep but no fill | Limit order placed, price doesn't return | Order cancelled at EOD |
 | Bot stopped mid-trade | Stop bot during InTrade state | OnStop closes position and cancels orders |
 | Chart timeframe change | Attach to M5 instead of M15 | Should still work (HHMM-based, not bar-count-based) |
+| FTMO daily loss guard | Set low daily limit, simulate losing trade | No new trades after limit approach |
+| FTMO drawdown guard | Set low max drawdown | Bot halts trading when drawdown nears limit |
 
 ### Step 7: Non-Repainting Verification
 
@@ -219,7 +221,7 @@ Run these specific scenarios (find historical dates or wait for live occurrence)
 ## Todo List
 
 - [ ] Compile both files in cTrader Automate IDE — zero errors
-- [ ] Attach indicator to #US30 M15 — visual inspection of 30+ days
+- [ ] Attach indicator to US30 M15 — visual inspection of 30+ days
 - [ ] Verify London range boxes match TradingView
 - [ ] Verify dashboard shows correct status for each state
 - [ ] Cross-platform comparison for 5 signal dates
@@ -245,9 +247,9 @@ Run these specific scenarios (find historical dates or wait for live occurrence)
 - Forward test: signals match TradingView real-time for 2+ consecutive days
 
 ## Risk Assessment
-- **FxPro data differences**: FxPro's #US30 data may differ slightly from TradingView's data feed. Minor OHLC differences are acceptable — sweep detection bar must still match
-- **Backtest data quality**: cTrader backtest uses bar data (not tick data by default). Intra-bar SL/TP resolution is approximated. For accurate SL/TP testing, use tick data backtest if available on FxPro
-- **Demo vs live execution**: FxPro demo may have different execution (faster fills, no slippage). Real account testing is beyond this plan's scope but recommended before real money
+- **FTMO data differences**: FTMO's US30 data may differ slightly from TradingView's data feed. Minor OHLC differences are acceptable — sweep detection bar must still match
+- **Backtest data quality**: cTrader backtest uses bar data (not tick data by default). Intra-bar SL/TP resolution is approximated. For accurate SL/TP testing, use tick data backtest if available on FTMO
+- **Demo vs live execution**: FTMO demo may have different execution (faster fills, no slippage). Real account testing is beyond this plan's scope but recommended before real money
 - **Time commitment**: Forward test requires waiting for actual trading days — can't be compressed. Plan 1-2 weeks for thorough forward testing
 
 ## Security Considerations
@@ -255,7 +257,15 @@ Run these specific scenarios (find historical dates or wait for live occurrence)
 - No API keys or credentials needed for demo testing
 - Verify no sensitive data in cTrader log output (Print statements)
 
+## FTMO-Specific Validation
+- [ ] Verify `US30` symbol loads correctly on FTMO cTrader
+- [ ] Check `Symbol.PipSize` and `Symbol.TickSize` values on FTMO
+- [ ] Test FTMO daily loss guard: set limit to $100, lose $80+, verify no new trades
+- [ ] Test FTMO drawdown guard: set limit to $200, verify guard triggers at 80%
+- [ ] Verify cBot runs without `AccessRights` issues on FTMO cTrader
+- [ ] Confirm FTMO allows automated trading (no manual-only restriction)
+
 ## Next Steps
-- After all tests pass: Deploy to FxPro live account with minimal volume
-- Monitor live performance for 2-4 weeks before increasing volume
-- Consider publishing to cTrader Store if strategy proves profitable
+- After all tests pass: Deploy to FTMO funded account with minimal volume
+- Monitor live performance for 2-4 weeks
+- Keep FTMO risk guards at conservative 80% thresholds initially

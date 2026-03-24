@@ -8,7 +8,7 @@
 
 ## Overview
 - **Priority**: P2 — cosmetic, not blocking cBot work
-- **Status**: pending
+- **Status**: complete
 - **Effort**: 1h
 - **Description**: Replicate the Pine dashboard table showing H4 trend, H1 momentum, range size, sweep status, and trade result. Use `Chart.DrawStaticText()` since cTrader has no table widget equivalent.
 

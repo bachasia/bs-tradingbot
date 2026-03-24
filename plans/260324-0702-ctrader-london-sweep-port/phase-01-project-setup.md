@@ -9,7 +9,7 @@
 
 ## Overview
 - **Priority**: P1 — foundation for all subsequent phases
-- **Status**: pending
+- **Status**: complete
 - **Effort**: 1h
 - **Description**: Create file structure, class boilerplate with correct attributes, all `[Parameter]` inputs mirroring Pine inputs, state machine enum, and class-level field declarations.
 

@@ -11,7 +11,7 @@
 
 ## Overview
 - **Priority**: P1 — filters gate all sweep signals
-- **Status**: pending
+- **Status**: complete
 - **Effort**: 1.5h
 - **Description**: Implement H4 EMA dual crossover trend filter and H1 close-based momentum filter using cTrader's MTF API. Ensure non-repainting via `Last(1)` / index mapping to confirmed bars only.
 
