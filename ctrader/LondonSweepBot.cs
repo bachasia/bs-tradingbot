@@ -151,17 +151,6 @@ namespace cAlgo.Robots
                 CloseBotPositions("EOD cutoff");
             }
 
-            // ─── Log indicator state at key times ─────────────────────
-            // Log at London close (09:00) for daily diagnostics
-            if (hhmm >= 900 && hhmm <= 915)
-            {
-                Print("[{0}] DAILY STATUS @ {1}: State={2} Range={3:F1} H={4:F1} L={5:F1} LongOK={6} ShortOK={7}",
-                    BotLabel, Bars.OpenTimes.Last(1).ToString("MM/dd HH:mm"),
-                    _indicator.CurrentState, _indicator.RangeValue,
-                    _indicator.LondonHighValue, _indicator.LondonLowValue,
-                    _indicator.IsLongAllowed, _indicator.IsShortAllowed);
-            }
-
             // ─── Read indicator signals (explicit index for reliability) ──
             int sigIdx = Bars.Count - 2;  // just-closed bar index
             if (sigIdx < 0) return;
