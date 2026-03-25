@@ -270,16 +270,18 @@ namespace cAlgo.Indicators
                 _state = SessionState.SweepWindow;
             }
 
+            // ─── STATE: SWEEPWINDOW timeout (checked BEFORE detect) ──────────
+            // Must run first so the 11:00 candle (open at 11:00, close at 11:15)
+            // does not generate a signal after the cutoff.
+            if (_state == SessionState.SweepWindow && hhmm >= SweepEndHHMM)
+            {
+                _state = SessionState.Done;
+            }
+
             // ─── STATE: SWEEPWINDOW — detect sweep ───────────────────
             if (_state == SessionState.SweepWindow && !_tradedToday)
             {
                 DetectSweep(prev);
-            }
-
-            // ─── STATE: SWEEPWINDOW timeout ──────────────────────────
-            if (_state == SessionState.SweepWindow && hhmm >= SweepEndHHMM)
-            {
-                _state = SessionState.Done;
             }
 
             // ─── STATE: INTRADE — monitor SL/TP/EOD ──────────────────
@@ -330,13 +332,15 @@ namespace cAlgo.Indicators
         }
 
         /// <summary>Capture H1 close at London end. Uses time-based lookup
-        /// to get the H1 bar that closed at ~09:00 EST (the 08:00-09:00 candle).
-        /// Strategy compares this vs London start close (6h apart).</summary>
+        /// to get the H1 bar that closed at ~08:00 EST (the 07:00-08:00 candle).
+        /// Strategy spec: compare close@08:00 vs close@03:00 for H1 momentum.
+        /// Called at 09:00 EST: h1Idx points to the 09:00-10:00 bar, so
+        /// h1Idx-2 gives the 07:00-08:00 bar that closed at 08:00.</summary>
         private void CaptureH1CloseAtLondonEnd(DateTime barTime)
         {
             int h1Idx = _h1Bars.OpenTimes.GetIndexByTime(barTime);
-            if (h1Idx > 0)
-                _h1CloseAtLondonEnd = _h1Bars.ClosePrices[h1Idx - 1];
+            if (h1Idx > 1)
+                _h1CloseAtLondonEnd = _h1Bars.ClosePrices[h1Idx - 2];
         }
 
         // ─── SWEEP DETECTION ─────────────────────────────────────────────
