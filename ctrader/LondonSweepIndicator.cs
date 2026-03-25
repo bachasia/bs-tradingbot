@@ -346,6 +346,20 @@ namespace cAlgo.Indicators
             double prevLow   = Bars.LowPrices[prev];
             double prevClose = Bars.ClosePrices[prev];
 
+            // ─── BREAKOUT CHECK (must come FIRST) ───────────────────────
+            // Strategy rule: "Nếu giá phá vỡ High/Low nhưng đóng cửa ngoài
+            // vùng → Đó là Breakout, không phải Sweep → Không vào lệnh."
+            // Once ANY candle closes outside the London range during sweep
+            // window, the day is invalidated — no more sweep opportunities.
+            bool closedBelowRange = prevClose < _londonLow;
+            bool closedAboveRange = prevClose > _londonHigh;
+            if (closedBelowRange || closedAboveRange)
+            {
+                _state = SessionState.Done;
+                return;
+            }
+
+            // ─── SWEEP CHECK (close must be INSIDE range) ───────────────
             bool longSweep = false;
             bool shortSweep = false;
 
