@@ -155,6 +155,15 @@ namespace cAlgo.Robots
             int sigIdx = Bars.Count - 2;  // just-closed bar index
             if (sigIdx < 0) return;
 
+            // Safety: reject signals from bars outside the sweep window.
+            // The indicator has its own timeout, but this is a redundant guard
+            // against timing edge cases in backtesting/visual mode.
+            if (hhmm < SweepStartHHMM || hhmm >= SweepEndHHMM)
+            {
+                // Don't even read indicator outputs outside sweep window
+                return;
+            }
+
             double longVal  = _indicator.LongSignal[sigIdx];
             double shortVal = _indicator.ShortSignal[sigIdx];
             bool isLong  = !double.IsNaN(longVal) && longVal > 0.5;

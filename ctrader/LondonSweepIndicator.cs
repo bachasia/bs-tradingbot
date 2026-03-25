@@ -363,36 +363,34 @@ namespace cAlgo.Indicators
                 return;
             }
 
+            // ─── DETECT WICK BREACHES ───────────────────────────────────
+            // Close is inside range (breakout check passed). Check if wicks
+            // pierced the levels by threshold — these are sweep events.
+            bool wickSweptHigh = (prevHigh - _londonHigh) >= SweepThreshold;
+            bool wickSweptLow  = (_londonLow - prevLow)   >= SweepThreshold;
+
             // ─── SWEEP CHECK (close must be INSIDE range) ───────────────
             bool longSweep = false;
             bool shortSweep = false;
 
             // LONG: wick dips below London Low by threshold, closes back above
-            if (_longAllowed)
+            if (_longAllowed && wickSweptLow && prevClose > _londonLow)
             {
-                double sweepDepth = _londonLow - prevLow;
-                if (sweepDepth >= SweepThreshold && prevClose > _londonLow)
-                {
-                    longSweep = true;
-                    _tradeDir = 1;
-                    _entryPrice = prevClose;
-                    _slPrice = prevLow - SlBuffer;
-                    _tpPrice = prevClose + (TpMultiplier * _rangeSize);
-                }
+                longSweep = true;
+                _tradeDir = 1;
+                _entryPrice = prevClose;
+                _slPrice = prevLow - SlBuffer;
+                _tpPrice = prevClose + (TpMultiplier * _rangeSize);
             }
 
             // SHORT: wick spikes above London High by threshold, closes back below
-            if (_shortAllowed && !longSweep)
+            if (_shortAllowed && !longSweep && wickSweptHigh && prevClose < _londonHigh)
             {
-                double sweepHeight = prevHigh - _londonHigh;
-                if (sweepHeight >= SweepThreshold && prevClose < _londonHigh)
-                {
-                    shortSweep = true;
-                    _tradeDir = -1;
-                    _entryPrice = prevClose;
-                    _slPrice = prevHigh + SlBuffer;
-                    _tpPrice = prevClose - (TpMultiplier * _rangeSize);
-                }
+                shortSweep = true;
+                _tradeDir = -1;
+                _entryPrice = prevClose;
+                _slPrice = prevHigh + SlBuffer;
+                _tpPrice = prevClose - (TpMultiplier * _rangeSize);
             }
 
             if (longSweep || shortSweep)
@@ -409,6 +407,12 @@ namespace cAlgo.Indicators
 
                 DrawTradeLines(prev);
                 DrawSweepArrow(prev, longSweep);
+            }
+            else if (wickSweptHigh || wickSweptLow)
+            {
+                // Sweep occurred but filters blocked the trade direction.
+                // Liquidity already consumed → no more sweep opportunities today.
+                _state = SessionState.Done;
             }
         }
 
