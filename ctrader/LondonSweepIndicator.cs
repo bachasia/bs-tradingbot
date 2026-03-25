@@ -332,15 +332,15 @@ namespace cAlgo.Indicators
         }
 
         /// <summary>Capture H1 close at London end. Uses time-based lookup
-        /// to get the H1 bar that closed at ~08:00 EST (the 07:00-08:00 candle).
-        /// Strategy spec: compare close@08:00 vs close@03:00 for H1 momentum.
-        /// Called at 09:00 EST: h1Idx points to the 09:00-10:00 bar, so
-        /// h1Idx-2 gives the 07:00-08:00 bar that closed at 08:00.</summary>
+        /// to get the 08:00-09:00 H1 bar ("nến 8h") that closes at 09:00 EST.
+        /// Strategy: compare close of nến 8h vs close of nến 3h for H1 momentum.
+        /// Called at 09:00 EST: h1Idx points to the 09:00-10:00 bar,
+        /// so h1Idx-1 gives the 08:00-09:00 bar (nến 8h).</summary>
         private void CaptureH1CloseAtLondonEnd(DateTime barTime)
         {
             int h1Idx = _h1Bars.OpenTimes.GetIndexByTime(barTime);
-            if (h1Idx > 1)
-                _h1CloseAtLondonEnd = _h1Bars.ClosePrices[h1Idx - 2];
+            if (h1Idx > 0)
+                _h1CloseAtLondonEnd = _h1Bars.ClosePrices[h1Idx - 1];
         }
 
         // ─── SWEEP DETECTION ─────────────────────────────────────────────
@@ -441,6 +441,23 @@ namespace cAlgo.Indicators
             // Stop extending trade lines on resolution
             if (slHit || tpHit || eodClose)
                 StopTradeLines(prev);
+        }
+
+        // ─── FILL FEEDBACK (called by bot after ExecuteMarketOrder) ─────────
+        /// <summary>
+        /// Bot calls this after order fill to sync visual lines and ManageTrade
+        /// state with the actual fill prices. Fixes the mismatch between the
+        /// planned signal price (bar close) and the actual execution price
+        /// (next bar open), which can cause visual SL/TP lines to display
+        /// at wrong levels and ManageTrade to misidentify SL/TP hits.
+        /// </summary>
+        public void UpdateActualFill(double actualEntry, double actualSl, double actualTp, int barIdx)
+        {
+            _entryPrice = actualEntry;
+            _slPrice    = actualSl;
+            _tpPrice    = actualTp;
+            // Redraw lines at corrected prices (overwrites lines set at signal detection)
+            DrawTradeLines(barIdx);
         }
 
         // ═══════════════════════════════════════════════════════════════════

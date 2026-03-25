@@ -227,6 +227,20 @@ namespace cAlgo.Robots
                         BotLabel, dir, volume, slPips, tpPips);
                     _tradesToday++;
                     PlayAlert();
+
+                    // Sync indicator visuals with actual fill prices.
+                    // Fill price (next bar open) can differ from planned entry (signal bar close),
+                    // so SL/TP levels set by cTrader are at different absolute prices than
+                    // the indicator's visual lines. UpdateActualFill corrects the chart display
+                    // and ManageTrade's SL/TP detection to use the real order levels.
+                    var pos = result.Position;
+                    if (pos != null && pos.StopLoss.HasValue && pos.TakeProfit.HasValue)
+                    {
+                        int sigBarIdx = Bars.Count - 2;
+                        _indicator.UpdateActualFill(pos.EntryPrice, pos.StopLoss.Value, pos.TakeProfit.Value, sigBarIdx);
+                        Print("[{0}] FILL SYNC: Entry={1:F1} SL={2:F1} TP={3:F1}",
+                            BotLabel, pos.EntryPrice, pos.StopLoss.Value, pos.TakeProfit.Value);
+                    }
                 }
                 else
                 {
